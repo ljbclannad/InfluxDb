@@ -7,45 +7,43 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api/write"
+
+	"influxdb-demo/config"
 )
 
 func main() {
+	cfg := config.NewConfig() // 创建配置实例
 	// InfluxDB连接配置
-	token := "4t1azdOBhIcpGaOJ_5tK82luGKkxOuIRAMngMcCT1LLVZ_L7dAJK7DlJ896F0z-mTHM6OwCkB8jW2hQI3EF-ug=="
-	url := "http://localhost:8086"
-	org := "your-org"
-	bucket := "your-bucket"
+	token := cfg.InfluxDB.Token
 
-	// 创建客户端
+	url := cfg.InfluxDB.URL
 	client := influxdb2.NewClient(url, token)
+
 	defer client.Close()
-
-	// 获取写入客户端
+	org := cfg.InfluxDB.Org
+	bucket := cfg.InfluxDB.Bucket
 	writeAPI := client.WriteAPIBlocking(org, bucket)
+	for value := 0; value < 5; value++ {
+		tags := map[string]string{
+			"tagname1": "tagvalue1",
+		}
+		fields := map[string]interface{}{
+			"field1": value,
+		}
+		point := write.NewPoint("measurement1", tags, fields, time.Now())
+		time.Sleep(1 * time.Second) // separate points by 1 second
 
-	// 创建数据点
-	p := influxdb2.NewPoint(
-		"system_metrics",
-		map[string]string{
-			"host": "host1",
-		},
-		map[string]interface{}{
-			"cpu_usage": 80.0,
-			"memory":    70.5,
-		},
-		time.Now(),
-	)
-
-	// 写入数据
-	if err := writeAPI.WritePoint(context.Background(), p); err != nil {
-		log.Fatal(err)
+		if err := writeAPI.WritePoint(context.Background(), point); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// 查询数据
 	queryAPI := client.QueryAPI(org)
-	query := `from(bucket:"your-bucket")
+	query := `from(bucket:"ljb")
 		|> range(start: -1h)
-		|> filter(fn: (r) => r["_measurement"] == "system_metrics")`
+		|> filter(fn: (r) => r["_measurement"] == "measurement1")`
 
 	result, err := queryAPI.Query(context.Background(), query)
 	if err != nil {
