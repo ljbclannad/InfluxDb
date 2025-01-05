@@ -10,7 +10,7 @@ go mod tidy
 ```
 
 ## 使用
-
+https://docs.influxdata.com/influxdb/v2/get-started/setup/
 ```bash
 go run main.go
 ```
